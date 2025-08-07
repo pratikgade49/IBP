@@ -1,0 +1,43 @@
+{
+  "Description": "Security Group for IBP External Forecasting EC2 Instance",
+  "GroupName": "ibp-forecasting-sg",
+  "SecurityGroupRules": [
+    {
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 22,
+          "ToPort": 22,
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "SSH access (restrict to your IP in production)"
+            }
+          ]
+        },
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 80,
+          "ToPort": 80,
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTP (redirects to HTTPS)"
+            }
+          ]
+        },
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 443,
+          "ToPort": 443,
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTPS access"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
