@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    expose:
+      - 8000
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./cert.pem:/etc/ssl/certs/cert.pem:ro
+      - ./newprivkey.pem:/etc/ssl/private/newprivkey.pem:ro
+    depends_on:
+      - app
