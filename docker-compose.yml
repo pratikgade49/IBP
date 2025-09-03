@@ -13,6 +13,7 @@ services:
       - ./forecast_processor.log:/app/forecast_processor.log
       - ./cert.pem:/app/cert.pem:ro
       - ./privkey.pem:/app/privkey.pem:ro
+      - ./server.cfg:/app/server.cfg:ro
     restart: unless-stopped
     networks:
       - ibp-network
