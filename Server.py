@@ -93,7 +93,6 @@
 #     print("Server stopped.")
 
 import os
-import ssl
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from threading import Thread
@@ -112,8 +111,6 @@ auth_cfg = config["AUTHCONFIG"]
 
 SERVER_ADDRESS = server_cfg.get("server_address", "0.0.0.0")
 PORT = server_cfg.getint("port", 8000)
-KEY_FILE = server_cfg.get("KEY_FILE", "newprivkey.pem")
-CERT_FILE = server_cfg.get("CERT_FILE", "cert.pem")
 
 USER_TOKEN = auth_cfg.get("user_token")
 
@@ -172,12 +169,8 @@ class ForecastHTTPRequestHandler(SimpleHTTPRequestHandler):
 def run_server():
     httpd = HTTPServer((SERVER_ADDRESS, PORT), ForecastHTTPRequestHandler)
 
-    # Setup SSL context
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
-    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
-    print(f"Server started at https://{SERVER_ADDRESS}:{PORT}")
+    print(f"Server started at http://{SERVER_ADDRESS}:{PORT}")
     print("Waiting for external notification requests...")
 
     try:
