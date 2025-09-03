@@ -15,7 +15,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('forecast_processor.log')
+        logging.FileHandler('/app/logs/forecast_processor.log')
     ]
 )
 logger = logging.getLogger(__name__)
