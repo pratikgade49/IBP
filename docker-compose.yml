@@ -5,22 +5,18 @@ services:
     build:
       context: .
       dockerfile: dockerfile
-    expose:
-      - "8001"
+    ports:
+      - "443:8001"  # Map host port 443 to container port 8001
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./forecast_processor.log:/app/forecast_processor.log
+      - ./cert.pem:/app/cert.pem:ro
+      - ./privkey.pem:/app/privkey.pem:ro
     restart: unless-stopped
+    networks:
+      - ibp-network
 
-  nginx:
-    image: nginx:latest
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./cert.pem:/etc/ssl/certs/cert.pem:ro
-      - ./privkey.pem:/etc/ssl/private/privkey.pem:ro
-    depends_on:
-      - ibp-forecast
-    restart: unless-stopped
+networks:
+  ibp-network:
+    driver: bridge
