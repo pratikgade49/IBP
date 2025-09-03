@@ -73,7 +73,7 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
 
         if path == "/health":
             # Health check endpoint
-            self.wfile.write(b"<p>✅ Server is healthy and running</p>")
+            self.wfile.write(b"<p>[OK] Server is healthy and running</p>")
             self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
             self.wfile.write(f"<p>Server address: {SERVER_ADDRESS}:{PORT}</p>".encode("utf-8"))
             logger.info("Health check request processed successfully")
@@ -161,7 +161,7 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
 
         if path == "/health":
             # Health check endpoint for POST as well
-            self.wfile.write(b"<p>✅ Server is healthy and running (POST)</p>")
+            self.wfile.write(b"<p>[OK] Server is healthy and running (POST)</p>")
             self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
             logger.info("Health check POST request processed successfully")
             

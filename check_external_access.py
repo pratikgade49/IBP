@@ -44,12 +44,12 @@ def test_external_connectivity():
     try:
         response = requests.get(health_url, verify=False, timeout=10)
         if response.status_code == 200:
-            logger.info("✅ Health check successful - Server is reachable!")
+            logger.info("[OK] Health check successful - Server is reachable!")
             print(f"Response: {response.text}")
         else:
-            logger.error(f"❌ Health check failed - Status: {response.status_code}")
+            logger.error(f"[FAIL] Health check failed - Status: {response.status_code}")
     except Exception as e:
-        logger.error(f"❌ Health check failed - {str(e)}")
+        logger.error(f"[FAIL] Health check failed - {str(e)}")
     
     print("-" * 40)
     
@@ -58,14 +58,14 @@ def test_external_connectivity():
     try:
         response = requests.get(test_url, headers=headers, verify=False, timeout=10)
         if response.status_code == 200:
-            logger.info("✅ IBP endpoint test successful!")
+            logger.info("[OK] IBP endpoint test successful!")
             print(f"Response: {response.text}")
         elif response.status_code == 401:
-            logger.warning("⚠️  Authentication failed - Check credentials")
+            logger.warning("[WARN] Authentication failed - Check credentials")
         else:
-            logger.error(f"❌ IBP endpoint test failed - Status: {response.status_code}")
+            logger.error(f"[FAIL] IBP endpoint test failed - Status: {response.status_code}")
     except Exception as e:
-        logger.error(f"❌ IBP endpoint test failed - {str(e)}")
+        logger.error(f"[FAIL] IBP endpoint test failed - {str(e)}")
     
     print("-" * 40)
     
@@ -75,11 +75,11 @@ def test_external_connectivity():
     try:
         response = requests.get(local_health_url, verify=False, timeout=5)
         if response.status_code == 200:
-            logger.info("✅ Local Docker connectivity works")
+            logger.info("[OK] Local Docker connectivity works")
         else:
-            logger.error(f"❌ Local Docker test failed - Status: {response.status_code}")
+            logger.error(f"[FAIL] Local Docker test failed - Status: {response.status_code}")
     except Exception as e:
-        logger.error(f"❌ Local Docker test failed - {str(e)}")
+        logger.error(f"[FAIL] Local Docker test failed - {str(e)}")
 
 def check_aws_security_groups():
     """Provide instructions for checking AWS security groups"""
