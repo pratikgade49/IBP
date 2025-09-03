@@ -6,6 +6,8 @@ from threading import Thread
 from configparser import ConfigParser
 from ForecastRequestProcessor import process_forecast_request
 import logging
+import socket
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -38,10 +40,16 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
     """
 
     def do_GET(self):
+        start_time = time.time()
         auth_header = self.headers.get("Authorization")
         
-        logger.info(f"Received GET request: {self.path}")
+        logger.info(f"=== INCOMING REQUEST ===")
+        logger.info(f"Path: {self.path}")
+        logger.info(f"Method: GET")
+        logger.info(f"Client IP: {self.client_address[0]}")
+        logger.info(f"User-Agent: {self.headers.get('User-Agent', 'Unknown')}")
         logger.debug(f"Authorization header: {auth_header}")
+        logger.debug(f"All headers: {dict(self.headers)}")
 
         if auth_header is None:
             self._send_unauthorized("No auth header received")
@@ -63,7 +71,14 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
 
         path = urlparse(self.path).path
 
-        if path == "/ibp/demand/ExternalForecastNotification":
+        if path == "/health":
+            # Health check endpoint
+            self.wfile.write(b"<p>[OK] Server is healthy and running</p>")
+            self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
+            self.wfile.write(f"<p>Server address: {SERVER_ADDRESS}:{PORT}</p>".encode("utf-8"))
+            logger.info("Health check request processed successfully")
+            
+        elif path == "/ibp/demand/ExternalForecastNotification":
             query = parse_qs(urlparse(self.path).query)
             if "RequestID" in query:
                 try:
@@ -100,6 +115,97 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
             self.wfile.write(b"<p>Expected: /ibp/demand/ExternalForecastNotification</p>")
 
         self.wfile.write(b"</body></html>")
+        
+        end_time = time.time()
+        logger.info(f"Request completed in {end_time - start_time:.3f} seconds")
+        logger.info("=== REQUEST END ===")
+
+    def do_POST(self):
+        """Handle POST requests (in case IBP sends POST instead of GET)"""
+        start_time = time.time()
+        auth_header = self.headers.get("Authorization")
+        
+        logger.info(f"=== INCOMING POST REQUEST ===")
+        logger.info(f"Path: {self.path}")
+        logger.info(f"Method: POST")
+        logger.info(f"Client IP: {self.client_address[0]}")
+        logger.info(f"User-Agent: {self.headers.get('User-Agent', 'Unknown')}")
+        logger.debug(f"Authorization header: {auth_header}")
+        logger.debug(f"All headers: {dict(self.headers)}")
+        
+        # Read POST body if present
+        content_length = int(self.headers.get('Content-Length', 0))
+        if content_length > 0:
+            post_data = self.rfile.read(content_length)
+            logger.debug(f"POST body: {post_data.decode('utf-8', errors='ignore')}")
+
+        if auth_header is None:
+            self._send_unauthorized("No auth header received")
+            logger.warning("POST request rejected: No authorization header")
+            return
+
+        if auth_header != USER_TOKEN:
+            self._send_unauthorized("Invalid credentials")
+            logger.warning(f"POST request rejected: Invalid authorization header")
+            return
+
+        # Process the same way as GET
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+
+        self.wfile.write(b"<html><body>")
+        self.wfile.write(b"<h1>IBP External Forecast Server</h1>")
+
+        path = urlparse(self.path).path
+
+        if path == "/health":
+            # Health check endpoint for POST as well
+            self.wfile.write(b"<p>[OK] Server is healthy and running (POST)</p>")
+            self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
+            logger.info("Health check POST request processed successfully")
+            
+        elif path == "/ibp/demand/ExternalForecastNotification":
+            query = parse_qs(urlparse(self.path).query)
+            if "RequestID" in query:
+                try:
+                    ext_req_id = int(query["RequestID"][0])
+                    logger.info(f"Processing external forecast notification (POST) for RequestID: {ext_req_id}")
+                    
+                    self.wfile.write(
+                        f"<p>External forecast notification received for RequestID: {ext_req_id}</p>".encode("utf-8")
+                    )
+                    self.wfile.write(b"<p>Processing started in background...</p>")
+                    
+                    # Start processing in a separate thread
+                    thread = Thread(target=process_forecast_request, args=(ext_req_id,))
+                    thread.daemon = True
+                    thread.start()
+                    
+                    logger.info(f"Started background processing for RequestID: {ext_req_id}")
+                    
+                except ValueError as e:
+                    error_msg = f"Invalid RequestID parameter: {query['RequestID'][0]}"
+                    logger.error(error_msg)
+                    self.wfile.write(f"<p>Error: {error_msg}</p>".encode("utf-8"))
+                except Exception as e:
+                    error_msg = f"Error processing request: {str(e)}"
+                    logger.error(error_msg, exc_info=True)
+                    self.wfile.write(f"<p>Error: {error_msg}</p>".encode("utf-8"))
+            else:
+                error_msg = "Missing RequestID parameter"
+                logger.warning(error_msg)
+                self.wfile.write(f"<p>Error: {error_msg}</p>".encode("utf-8"))
+        else:
+            logger.warning(f"Invalid POST request path: {path}")
+            self.wfile.write(f"<p>Invalid request path: {path}</p>".encode("utf-8"))
+            self.wfile.write(b"<p>Expected: /ibp/demand/ExternalForecastNotification</p>")
+
+        self.wfile.write(b"</body></html>")
+        
+        end_time = time.time()
+        logger.info(f"POST request completed in {end_time - start_time:.3f} seconds")
+        logger.info("=== POST REQUEST END ===")
 
     def _send_unauthorized(self, message):
         self.send_response(401)
@@ -127,6 +233,20 @@ def run_server():
         logger.info(f"IBP External Forecast Server started at https://{SERVER_ADDRESS}:{PORT}")
         logger.info("Waiting for external forecast notification requests from IBP...")
         logger.info(f"Endpoint: https://ec2-107-23-151-16.compute-1.amazonaws.com/ibp/demand/ExternalForecastNotification")
+        
+        # Log network diagnostics
+        logger.info(f"Server listening on {SERVER_ADDRESS}:{PORT}")
+        logger.info(f"SSL certificate: {CERT_FILE}")
+        logger.info(f"SSL private key: {KEY_FILE}")
+        
+        # Test if port is accessible
+        try:
+            test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_socket.bind((SERVER_ADDRESS, PORT))
+            test_socket.close()
+            logger.info(f"Port {PORT} is available and bound successfully")
+        except Exception as e:
+            logger.error(f"Port binding test failed: {str(e)}")
 
         httpd.serve_forever()
         

@@ -10,7 +10,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./forecast_processor.log:/app/forecast_processor.log
+      - ./logs:/app/logs
       - ./cert.pem:/app/cert.pem:ro
       - ./privkey.pem:/app/privkey.pem:ro
       - ./server.cfg:/app/server.cfg:ro

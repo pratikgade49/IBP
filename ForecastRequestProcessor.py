@@ -15,7 +15,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('forecast_processor.log')
+        logging.FileHandler('/app/logs/forecast_processor.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -172,6 +172,9 @@ def process_forecast_request(request_id: int):
                             
                         # Output Key Figures
                         for key_figure_name, key_figure_result in results.items():
+                            # Normalize to iterable if a scalar is returned
+                            if not isinstance(key_figure_result, (list, tuple, np.ndarray)):
+                                key_figure_result = [key_figure_result]
                             # Final validation
                             if any(isinstance(v, float) and not np.isfinite(v) for v in key_figure_result):
                                 logger.error(f"Non-finite values found in {key_figure_name} for GroupID {group_id}")

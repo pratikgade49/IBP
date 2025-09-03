@@ -1555,10 +1555,7 @@ def ml_forecast_calculation(planning_object_data: Dict, parameters: Dict,
         
         result = {
             "EXPOST": fitted_values,
-            "FORECAST": forecasts,
-            "BEST_MODEL": best_model_name,
-            "ALL_METRICS": all_metrics,
-            "TOTAL_ALGORITHMS_EVALUATED": len(all_algorithms)
+            "FORECAST": forecasts
         }
         
         logger.info(f"Successfully completed ML forecast calculation with {len(all_algorithms)} real algorithms")
