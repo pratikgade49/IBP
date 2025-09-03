@@ -71,7 +71,14 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
 
         path = urlparse(self.path).path
 
-        if path == "/ibp/demand/ExternalForecastNotification":
+        if path == "/health":
+            # Health check endpoint
+            self.wfile.write(b"<p>✅ Server is healthy and running</p>")
+            self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
+            self.wfile.write(f"<p>Server address: {SERVER_ADDRESS}:{PORT}</p>".encode("utf-8"))
+            logger.info("Health check request processed successfully")
+            
+        elif path == "/ibp/demand/ExternalForecastNotification":
             query = parse_qs(urlparse(self.path).query)
             if "RequestID" in query:
                 try:
@@ -152,7 +159,13 @@ class IBPForecastHandler(SimpleHTTPRequestHandler):
 
         path = urlparse(self.path).path
 
-        if path == "/ibp/demand/ExternalForecastNotification":
+        if path == "/health":
+            # Health check endpoint for POST as well
+            self.wfile.write(b"<p>✅ Server is healthy and running (POST)</p>")
+            self.wfile.write(f"<p>Server time: {time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>".encode("utf-8"))
+            logger.info("Health check POST request processed successfully")
+            
+        elif path == "/ibp/demand/ExternalForecastNotification":
             query = parse_qs(urlparse(self.path).query)
             if "RequestID" in query:
                 try:
