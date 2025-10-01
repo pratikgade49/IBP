@@ -13,7 +13,6 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import r2_score, mean_absolute_error, mean_absolute_percentage_error
 from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 import warnings
 import logging
@@ -210,74 +209,6 @@ def substitute_missing_data(planning_object_data: Dict, parameters: Dict) -> Dic
         logger.error(f"Error in substitute_missing_data: {str(e)}", exc_info=True)
         raise
 
-# def evaluate_all_models(X_train, y_train, X_test, y_test, scaler, tscv):
-#     """Evaluate all models and return the best performing one with metrics"""
-#     models_config = {
-#         'Ridge': {'model': Ridge(), 'params': {'alpha': [0.01, 0.1, 1, 10, 100]}},
-#         'Lasso': {'model': Lasso(), 'params': {'alpha': [0.0005, 0.001, 0.01, 0.1, 1, 10, 100]}},
-#         'ElasticNet': {'model': ElasticNet(max_iter=10000),
-#                       'params': {'alpha': [0.001, 0.01, 0.1, 1], 'l1_ratio': [0.1, 0.2, 0.3]}},
-#         'RandomForest': {'model': RandomForestRegressor(),
-#                         'params': {'n_estimators': [50, 100], 'max_depth': [4, 5], 'max_features': [0.5, 0.6]}},
-#         'SVR': {'model': SVR(kernel='linear'), 'params': {'C': [0.1, 1], 'epsilon': [0.05, 0.1]}}
-#     }
-
-#     best_model = None
-#     best_score = -np.inf
-#     best_model_name = ""
-#     all_metrics = {}
-
-#     for model_name, model_info in models_config.items():
-#         try:
-#             logger.info(f"\nEvaluating model: {model_name}")
-
-#             # Grid search with time series cross-validation
-#             grid_search = GridSearchCV(
-#                 model_info['model'],
-#                 model_info['params'],
-#                 cv=tscv,
-#                 scoring='neg_mean_absolute_error',
-#                 n_jobs=-1
-#             )
-#             grid_search.fit(X_train, y_train)
-
-#             # Get best model from grid search
-#             current_model = grid_search.best_estimator_
-
-#             # Evaluate on test data
-#             y_pred = current_model.predict(X_test)
-#             y_pred_actual = np.expm1(y_pred)
-#             y_test_actual = np.expm1(y_test)
-
-#             # Calculate metrics
-#             metrics = {
-#                 'MAE': mean_absolute_error(y_test_actual, y_pred_actual),
-#                 'MAPE': mean_absolute_percentage_error(y_test_actual, y_pred_actual),
-#                 'R2': r2_score(y_test_actual, y_pred_actual),
-#                 'Best Params': grid_search.best_params_
-#             }
-
-#             all_metrics[model_name] = metrics
-
-#             # Print model performance
-#             logger.info(f"Model: {model_name}")
-#             logger.info(f"Best Parameters: {grid_search.best_params_}")
-#             logger.info(f"MAE: {metrics['MAE']:.2f}")
-#             logger.info(f"MAPE: {metrics['MAPE']:.2%}")
-#             logger.info(f"R2 Score: {metrics['R2']:.2f}")
-
-#             # Update best model if current is better
-#             if metrics['R2'] > best_score:
-#                 best_score = metrics['R2']
-#                 best_model = current_model
-#                 best_model_name = model_name
-
-#         except Exception as e:
-#             logger.error(f"Error evaluating {model_name}: {str(e)}")
-#             continue
-
-#     logger.info(f"\nBest model selected: {best_model_name} with R2 score: {best_score:.2f}")
-#     return best_model, best_model_name, all_metrics
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, scaler, tscv, selected_model=None):
     """
@@ -286,7 +217,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, scaler, tscv, selected
     Args:
         selected_model: Optional string to specify which model to use
                        Options: 'Ridge', 'Lasso', 'ElasticNet', 'RandomForest', 'SVR',
-                               'GradientBoosting', 'XGBoost', 'LightGBM', 'CatBoost',
+                               'GradientBoosting', 'XGBoost', 'CatBoost',
                                'KNN', 'ExtraTrees', 'AdaBoost', 'BayesianRidge', 
                                'DecisionTree', 'MLP', 'Auto' (evaluates all)
     """
@@ -341,15 +272,6 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, scaler, tscv, selected
                 'max_depth': [3, 4, 5],
                 'subsample': [0.8, 1.0],
                 'colsample_bytree': [0.8, 1.0]
-            }
-        },
-        'LightGBM': {
-            'model': LGBMRegressor(random_state=42, verbosity=-1),
-            'params': {
-                'n_estimators': [50, 100, 200],
-                'learning_rate': [0.01, 0.05, 0.1],
-                'max_depth': [3, 4, 5],
-                'num_leaves': [15, 31, 50]
             }
         },
         'CatBoost': {
@@ -481,206 +403,6 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, scaler, tscv, selected
     
     return best_model, best_model_name, all_metrics
 
-# def ml_forecast_calculation(planning_object_data: Dict, parameters: Dict, historical_periods: int, forecast_periods: int, date_list: List[Tuple]) -> Dict:
-#     """Calculates ML-based Forecast with proper period handling"""
-#     logger.info(f"Starting ML forecast calculation with model: {parameters.get('Model')}")
-
-#     try:
-#         # Minimum data check
-#         if historical_periods < 6:
-#             logger.warning(f"Insufficient history ({historical_periods} periods). Returning NULL forecast")
-#             return {
-#                 "EXPOST": ["NULL"] * historical_periods,
-#                 "FORECAST": ["NULL"] * forecast_periods
-#             }
-
-#         # Store original demand data for expost
-#         original_demand = planning_object_data["HISTORY"].copy()
-#         logger.info(f"\nOriginal Input Data (first 10 values): {original_demand[:10]}")
-
-#         demand_history = planning_object_data["HISTORY"]
-
-#         # Ensure we have exactly the right number of historical periods
-#         if len(demand_history) != historical_periods:
-#             logger.warning(f"Demand history length ({len(demand_history)}) doesn't match historical_periods ({historical_periods})")
-#             if len(demand_history) < historical_periods:
-#                 demand_history.extend([0.0] * (historical_periods - len(demand_history)))
-#             else:
-#                 demand_history = demand_history[:historical_periods]
-
-#         # Create DataFrame with all historical data
-#         history_dates = [d[0] for d in date_list[:historical_periods]]
-#         df_history = pd.DataFrame({
-#             'Date': history_dates,
-#             'Actuals Qty for sales (S4+ETO)': demand_history,
-#             'original_index': list(range(historical_periods))
-#         })
-
-#         # Data preprocessing
-#         df_history['Date'] = pd.to_datetime(df_history['Date'])
-#         df_history = df_history.sort_values(by='Date')
-
-#         # Identify valid values for modeling
-#         valid_mask = (df_history['Actuals Qty for sales (S4+ETO)'].notna() &
-#                      np.isfinite(df_history['Actuals Qty for sales (S4+ETO)']) &
-#                      (df_history['Actuals Qty for sales (S4+ETO)'] != 0))
-
-#         df_valid = df_history[valid_mask].copy()
-
-#         if len(df_valid) < 6:
-#             logger.warning(f"Insufficient valid data points ({len(df_valid)}) for modeling")
-#             return {
-#                 "EXPOST": ["NULL"] * historical_periods,
-#                 "FORECAST": ["NULL"] * forecast_periods
-#             }
-
-#         # Outlier handling
-#         Q1 = df_valid["Actuals Qty for sales (S4+ETO)"].quantile(0.25)
-#         Q3 = df_valid["Actuals Qty for sales (S4+ETO)"].quantile(0.75)
-#         IQR = Q3 - Q1
-#         lower_bound = Q1 - 1.5 * IQR
-#         upper_bound = Q3 + 1.5 * IQR
-
-#         df_valid["Sales_clean"] = df_valid["Actuals Qty for sales (S4+ETO)"].clip(lower_bound, upper_bound)
-#         df_valid['log_sales'] = np.log1p(df_valid["Sales_clean"])
-
-#         # Feature engineering
-#         df_valid['Year'] = df_valid['Date'].dt.year
-#         df_valid['Month'] = df_valid['Date'].dt.month
-#         df_valid['Quarter'] = df_valid['Date'].dt.quarter
-#         df_valid['Is_High_Season'] = df_valid['Month'].isin([12, 1, 2]).astype(int)
-#         df_valid['Lag_1'] = df_valid['log_sales'].shift(1)
-#         df_valid['Lag_2'] = df_valid['log_sales'].shift(2)
-#         df_valid['Lag_3'] = df_valid['log_sales'].shift(3)
-#         df_valid['Rolling_3'] = df_valid['log_sales'].rolling(window=3).mean()
-
-#         # Drop rows with NaN in features
-#         df_model = df_valid.dropna(subset=['Lag_1', 'Lag_2', 'Lag_3', 'Rolling_3']).copy()
-
-#         if len(df_model) < 3:
-#             logger.warning("Insufficient data after feature engineering")
-#             return {
-#                 "EXPOST": ["NULL"] * historical_periods,
-#                 "FORECAST": ["NULL"] * forecast_periods
-#             }
-
-#         # Prepare features and target
-#         features = ['Year', 'Month', 'Quarter', 'Lag_1', 'Lag_2', 'Lag_3', 'Rolling_3', 'Is_High_Season']
-#         target = 'log_sales'
-
-#         # Split data into train and test sets (80-20 split)
-#         split_idx = int(len(df_model) * 0.8)
-#         X_train = df_model[features].iloc[:split_idx]
-#         y_train = df_model[target].iloc[:split_idx]
-#         X_test = df_model[features].iloc[split_idx:]
-#         y_test = df_model[target].iloc[split_idx:]
-
-#         # Scale features
-#         scaler = StandardScaler()
-#         X_train_scaled = scaler.fit_transform(X_train)
-#         X_test_scaled = scaler.transform(X_test)
-
-#         # Time series cross-validation
-#         tscv = TimeSeriesSplit(n_splits=min(3, len(X_train) - 1))
-
-#         # Evaluate all models and select the best one
-#         best_model, best_model_name, all_metrics = evaluate_all_models(
-#             X_train_scaled, y_train, X_test_scaled, y_test, scaler, tscv
-#         )
-
-#         # Train final model on all available data
-#         X_full = df_model[features]
-#         y_full = df_model[target]
-#         X_full_scaled = scaler.fit_transform(X_full)
-#         best_model.fit(X_full_scaled, y_full)
-
-#         # Generate predictions for the modeling data
-#         model_predictions_log = best_model.predict(X_full_scaled)
-#         model_predictions = np.expm1(model_predictions_log)
-
-#         # Create expost array with original values (not the preprocessed ones)
-#         expost = original_demand.copy()
-
-#         # Only replace values where we have predictions with predicted values
-#         for i, (idx, pred) in enumerate(zip(df_model['original_index'].values, model_predictions)):
-#             if 0 <= idx < historical_periods:
-#                 expost[idx] = float(pred)
-
-#         # Forecasting future periods
-#         if len(df_valid) >= 3:
-#             initial_lags_for_forecast = df_valid['log_sales'].iloc[-3:].values.tolist()
-#         else:
-#             available_logs = df_valid['log_sales'].dropna().values
-#             if len(available_logs) > 0:
-#                 initial_lags_for_forecast = available_logs[-min(3, len(available_logs)):].tolist()
-#                 while len(initial_lags_for_forecast) < 3:
-#                     initial_lags_for_forecast.insert(0, initial_lags_for_forecast[0] if initial_lags_for_forecast else 0.0)
-#             else:
-#                 initial_lags_for_forecast = [0.0, 0.0, 0.0]
-
-#         future_dates = [d[0] for d in date_list[historical_periods:historical_periods + forecast_periods]]
-
-#         def recursive_forecast(model, initial_lags, future_dates, scaler):
-#             lags = list(initial_lags)
-#             predictions = []
-#             for i, current_date in enumerate(future_dates):
-#                 year = current_date.year
-#                 month = current_date.month
-#                 quarter = (month - 1) // 3 + 1
-#                 is_high_season = 1 if month in [12, 1, 2] else 0
-#                 rolling_3 = np.mean(lags[-min(3, len(lags)):]) if len(lags) > 0 else 0
-#                 lag_1 = lags[-1] if len(lags) >= 1 else 0
-#                 lag_2 = lags[-2] if len(lags) >= 2 else 0
-#                 lag_3 = lags[-3] if len(lags) >= 3 else 0
-
-#                 X_future = np.array([year, month, quarter, lag_1, lag_2, lag_3,
-#                                     rolling_3, is_high_season]).reshape(1, -1)
-#                 X_future_scaled = scaler.transform(X_future)
-#                 pred_log = model.predict(X_future_scaled)[0]
-#                 predictions.append(np.expm1(pred_log))
-#                 lags.append(pred_log)
-#                 if len(lags) > 3:
-#                     lags = lags[-3:]
-
-#             return predictions
-
-#         forecast = recursive_forecast(best_model, initial_lags_for_forecast, future_dates, scaler)
-
-#         logger.info(f"\nFinal Forecast Values: {forecast}")
-
-#         # Ensure exact lengths
-#         if len(expost) != historical_periods:
-#             expost = (expost[:historical_periods] if len(expost) > historical_periods
-#                      else expost + ["NULL"] * (historical_periods - len(expost)))
-
-#         if len(forecast) != forecast_periods:
-#             forecast = (forecast[:forecast_periods] if len(forecast) > forecast_periods
-#                        else forecast + [forecast[-1] if forecast else 0.0] * (forecast_periods - len(forecast)))
-
-#         # Clean and validate results
-#         expost_clean = validate_and_clean(expost)
-#         forecast_clean = validate_and_clean(forecast)
-
-#         result_dict = {"EXPOST": expost_clean, "FORECAST": forecast_clean}
-
-#         if "ErrorInPeriod" in parameters.keys():
-#             error_in_periods = []
-#             for i in range(historical_periods):
-#                 if (i < len(original_demand) and
-#                     expost_clean[i] != "NULL" and
-#                     original_demand[i] is not None and
-#                     np.isfinite(original_demand[i])):
-#                     error_in_periods.append(abs(original_demand[i] - float(expost_clean[i])))
-#                 else:
-#                     error_in_periods.append("NULL")
-#             result_dict.update({"INDEPENDENT_RES01": error_in_periods})
-
-#         logger.info("Successfully completed ML forecast calculation")
-#         return result_dict
-
-#     except Exception as e:
-#         logger.error(f"Error in ml_forecast_calculation: {str(e)}", exc_info=True)
-#         return {"EXPOST": ["NULL"] * historical_periods, "FORECAST": ["NULL"] * forecast_periods}
 
 def ml_forecast_calculation(planning_object_data: Dict, parameters: Dict, 
                            historical_periods: int, forecast_periods: int, 
@@ -690,7 +412,7 @@ def ml_forecast_calculation(planning_object_data: Dict, parameters: Dict,
     
     Parameters can include:
     - Model: 'Ridge', 'Lasso', 'ElasticNet', 'RandomForest', 'SVR', 'GradientBoosting',
-             'XGBoost', 'LightGBM', 'CatBoost', 'KNN', 'ExtraTrees', 'AdaBoost',
+             'XGBoost', 'CatBoost', 'KNN', 'ExtraTrees', 'AdaBoost',
              'BayesianRidge', 'DecisionTree', 'MLP', or 'Auto' (default)
     """
     selected_model = parameters.get('Model', 'Auto')
